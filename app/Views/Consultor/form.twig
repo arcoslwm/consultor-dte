@@ -3,62 +3,60 @@
 {% block contenido %}
 {#<h2>Consultor boletas</h2>#}
 <hr>
-  <form id="formConsultor" method="post" action="{{ path_for('busqueda') }}">
-    <div class="form-group">
-      <label for="slTipoDoc">Tipo de Documento: </label>
-      <select id="slTipoDoc" name="slTipoDoc" class="form-control">
-        <option value="" selected disabled hidden>Tipo Doc.</option>
-        <option value="1">Boleta</option>
-        <option value="2">Boleta No Afecta o Exenta</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label for="txFolio">Folio: </label>{#validar solo nurmeros#}
-      <input id="txFolio" name="txFolio" type="text" class="form-control" placeholder="123456789" required>
-      {#<small id="emailHelp" class="form-text text-muted"></small>#}
-    </div>
-    <div class="form-group">
-      <label for="txMonto">Monto: </label>{#validar solo nurmeros#}
-      <input id="txMonto" name="txMonto" type="text" class="form-control"  placeholder="9999">
-    </div>
-
-    <div class="form-group">
-      <label for="dtFecha" >Fecha: </label>{# pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" #}
-      <input id="dtFecha" name="dtFecha" type="date" class="form-control" value="{{ "now"|date("Y-m-d") }}" max="{{ "now"|date("Y-m-d") }}">
-    </div>
+<div id="dvAlert" class="alert alert-danger" role="alert" style="display:none">
+  <h4 id="hMsg" class="alert-heading"></h4>
+  <ul id="lAlert">
+  </ul>
+</div>
+<form id="formConsultor" method="post" action="{{ path_for('busqueda') }}">
+  <div class="form-group">
+    <label for="slTipoDoc">Tipo de Documento: </label>
+    <select id="slTipoDoc" name="slTipoDoc" class="form-control">
+      <option value="" selected disabled hidden>Tipo Doc.</option>
+      <option value="1">Boleta</option>
+      <option value="2">Boleta No Afecta o Exenta</option>
+    </select>
+  </div>
+  <div class="form-group">
+    <label for="txFolio">Folio: </label>{#validar solo nurmeros#}
+    <input id="txFolio" name="txFolio" type="text" class="form-control" placeholder="123456789" required>
+    {#<small id="emailHelp" class="form-text text-muted"></small>#}
+  </div>
+  <div class="form-group">
+    <label for="txMonto">Monto: </label>{#validar solo nurmeros#}
+    <input id="txMonto" name="txMonto" type="text" class="form-control"  placeholder="9999">
+  </div>
+  <div class="form-group">
+    <label for="dtFecha" >Fecha: </label>{# pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" #}
+    <input id="dtFecha" name="dtFecha" type="date" class="form-control" value="{{ "now"|date("Y-m-d") }}" max="{{ "now"|date("Y-m-d") }}">
+  </div>
     {#
     <div class="form-check">
       <input type="checkbox" class="form-check-input" id="exampleCheck1">
       <label class="form-check-label" for="exampleCheck1">Check me out</label>
     </div>
     #}
-    <br>
-
-    <div class="form-row">
-      <div class="form-group col-md-4">
-      </div>
-      <div class="form-group col-md-4" style="text-align:center" >
-        <div id="dvBuscando" class="spinner-border" role="status" style="display:none" >
-          <span class="sr-only">buscando...</span>
-        </div>
-      </div>
-      <div class="form-group col-md-4" style="text-align:right">
-        <button id="btBuscar" class="btn btn-outline-success" type="submit">Buscar</button>
+  <br>
+  <div class="form-row">
+    <div class="form-group col-md-4"></div>
+    <div class="form-group col-md-4" style="text-align:center" >
+      <div id="dvBuscando" class="spinner-border" role="status" style="display:none">
+        <span class="sr-only">buscando...</span>
       </div>
     </div>
-  </form>
+    <div class="form-group col-md-4" style="text-align:right">
+      <button id="btBuscar" class="btn btn-outline-success" type="submit">Buscar</button>
+    </div>
+  </div>
+</form>
   {# <input type="submit" value="Submit"> #}
   {#-----------------------------------------------------------------#}
-  <hr>
-  <small>{{ "now"|date("d/m/Y H:i:s") }}</small>
-
+<hr>
+<small>{{ "now"|date("d/m/Y H:i:s") }}</small>
 {% endblock %}
 {% block scripts %}
-
 <script>
   $(document).ready(function () {
-    console.log('docReady!');
 
     $("#formConsultor").submit(function(e) {
       console.log('eventsubmit');
@@ -74,18 +72,48 @@
         url: url,
         data: form.serialize(), // serializes form input
         beforeSend: function() {
-          console.log('beforeSend');
+
           $("#btBuscar").hide();
+          $("#dvAlert").hide();
+          $("#hMsg").text('');//h4
+          $("#lAlert").html('');//lista
           $("#dvBuscando").show();
         },
         success: function(data){
           console.log('success: ',data);
-          alert(data);
+          //llenar tabla con link al PDF
+          // alert(data);
         },
         error: function (jqXhr, textStatus, errorMessage) {
-          console.log('ERROR'+errorMessage);
-          console.log(jqXhr);
-          console.log(textStatus);
+          var res = jqXhr.responseJSON;
+          switch (jqXhr.status) {
+            case 400:
+              $("#hMsg").text(res.message);
+              if('details' in res){
+                if('tipoDoc' in res.details){
+                  $("#lAlert").append('<li>'+res.details.tipoDoc+'</li>');
+                }
+                if('folio' in res.details){
+                  $("#lAlert").append('<li>'+res.details.folio+'</li>');
+                }
+                if('monto' in res.details){
+                  $("#lAlert").append('<li>'+res.details.monto+'</li>');
+                }
+                if('fecha' in res.details){
+                  $("#lAlert").append('<li>'+res.details.fecha+'</li>');
+                }
+              }
+              break;
+            case 500:
+              console.warn(' error 500');
+              $("#hMsg").text("Ha ocurrido un error desconocido, intente de nuevo más tarde");
+                break;
+            default:
+              console.warn(' error '+jqXhr.status);
+              $("#hMsg").text("Ha ocurrido un error desconocido, intente de nuevo más tarde");
+          }
+
+          $("#dvAlert").show();
         },
         complete: function(){
           console.log('complete');

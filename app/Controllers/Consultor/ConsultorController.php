@@ -34,6 +34,7 @@ class ConsultorController extends ControllerAbstract
             $res = $this->getResponse()->withJson(['message'=>'Error','details'=>['bad request']],400);
             return $res;
         }
+        // agregar validacion csrf
         $dte = new Dte(
                 $req->getParsedBodyParam('slTipoDoc' ,null),
                 $req->getParsedBodyParam('txFolio' ,null),
@@ -56,7 +57,7 @@ class ConsultorController extends ControllerAbstract
          */
         $log->debug("ConsultorController buscar return ");
         $res = $this->getResponse()->withJson(['status'=>'ok','data'=>'urlPDF']);
-        
+
         return $res;
     }
 }

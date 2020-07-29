@@ -72,4 +72,12 @@ class Dte
     function getErrors(){
         return $this->errors;
     }
+
+    function getFolio(){
+        return $this->folio;
+    }
+
+    function getFecha($format='d/m/Y'){
+        return $this->fecha->format($format);
+    }
 }

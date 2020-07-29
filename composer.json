@@ -37,10 +37,11 @@
       "bootstrap/helpers.php"
     ]
   },
-  "config": {
-    "optimize-autoloader": true
-  },
   "scripts": {
     "start": "php -S 0.0.0.0:8000 -t public"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "process-timeout":0
   }
 }

@@ -8,9 +8,13 @@ use Monolog\Logger;
 use Slim\Http\Request;
 use Slim\Http\Response;
 
+/**
+ * [ConsultorController description]
+ * 
+ * @author Luis Arcos <arcos.lwm@gmail.com>
+ */
 class ConsultorController extends ControllerAbstract
 {
-
     /**
      * [Carga el formulario de consulta ]
      * @return [twig view]
@@ -22,6 +26,10 @@ class ConsultorController extends ControllerAbstract
         return $this->render('Consultor/form.twig');
     }
 
+    /**
+     * valida datos y realiza la búsqueda del documento.
+     * @return
+     */
     public function buscar() {
 
         $log = $this->getService('logger');
@@ -30,11 +38,15 @@ class ConsultorController extends ControllerAbstract
         $log->debug("ConsultorController buscar... ");
 
         if($req->isXhr()===false){
+
             $log->warn('request no es Xhr');
-            $res = $this->getResponse()->withJson(['message'=>'Error','details'=>['bad request']],400);
+            $res = $this->getResponse()->withJson(
+                ['message'=>'La solicitud no ha podido ser procesada','details'=>['bad request']],
+                400
+            );
             return $res;
         }
-        // agregar validacion csrf
+
         $dte = new Dte(
                 $req->getParsedBodyParam('slTipoDoc' ,null),
                 $req->getParsedBodyParam('txFolio' ,null),
@@ -45,18 +57,37 @@ class ConsultorController extends ControllerAbstract
         if($dte->isValid()===false){
             $log->warn('Form con errores: '.print_r($dte->getErrors(),true));
 
-            $res = $this->getResponse()->withJson(['message'=>'Error de validación','details'=>$dte->getErrors()],400);
+            $res = $this->getResponse()->withJson(
+                ['message'=>'Error de validación', 'details'=>$dte->getErrors()],
+                400
+            );
             return $res;
         }
-        // $req = new Request($method, $uri, $headers, $cookies, $serverParams, $body [$uploadedFiles]);
 
         /**
          * consultar WS  dentro de un trycatch
          * devolver respuesta
          * sin doc o  cargar pdf de alguna manera
          */
-        $log->debug("ConsultorController buscar return ");
-        $res = $this->getResponse()->withJson(['status'=>'ok','data'=>'urlPDF']);
+
+        //dev testing
+        if (rand(0, 10)>5) {
+            $log->debug("ConsultorController busqueda CON resultado...");
+            $res = $this->getResponse()->withJson([
+                'message'=>'ok',
+                'data'=>[
+                    'folio'=>$dte->getFolio(),
+                    'fecha'=>$dte->getFecha(),
+                    'url'=>'http://biblioteca.clacso.edu.ar/ar/libros/osal/osal4/analisis.pdf'
+                ]
+            ]);
+        }
+        else {
+            $log->debug("ConsultorController busqueda SIN resultado...");
+            $res = $this->getResponse()->withJson([
+                'message'=>'No se encuentra documento asociado a los datos'
+            ]);
+        }
 
         return $res;
     }

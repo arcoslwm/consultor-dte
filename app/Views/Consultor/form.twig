@@ -3,11 +3,18 @@
 {% block contenido %}
 {#<h2>Consultor boletas</h2>#}
 <hr>
+{# mensajes validacion #}
 <div id="dvAlert" class="alert alert-danger" role="alert" style="display:none">
-  <h4 id="hMsg" class="alert-heading"></h4>
+  <h4 id="hMsgAlert" class="alert-heading" style="text-align:center"></h4>
   <ul id="lAlert">
   </ul>
 </div>
+
+{# mensaje busqueda sin resultado #}
+<div id="dvWarn" class="alert alert-warning" role="alert" style="display:none">
+  <h4 id="warnMsg" class="alert-heading" style="text-align:center"></h4>
+</div>
+
 <form id="formConsultor" method="post" action="{{ path_for('busqueda') }}">
   <div class="form-group">
     <label for="slTipoDoc">Tipo de Documento: </label>
@@ -37,31 +44,68 @@
     </div>
     #}
   <br>
+
   <div class="form-row">
     <div class="form-group col-md-4"></div>
+    {# div cargando mientras busca #}
     <div class="form-group col-md-4" style="text-align:center" >
       <div id="dvBuscando" class="spinner-border" role="status" style="display:none">
         <span class="sr-only">buscando...</span>
       </div>
     </div>
+
     <div class="form-group col-md-4" style="text-align:right">
       <button id="btBuscar" class="btn btn-outline-success" type="submit">Buscar</button>
     </div>
+
   </div>
 </form>
-  {# <input type="submit" value="Submit"> #}
-  {#-----------------------------------------------------------------#}
+
+{#
+<div id="dvResult" class="list-group" style="display:none">
+  <a id="aResult" href="#" target="_blank" class="list-group-item list-group-item-action list-group-item-success"></a>
+</div>
+#}
+
+{# resultado de busqueda #}
+<div id="dvResult" class="card border-success mb-3" style="display:none">
+  <div class="card-header" style="text-align:center">Resultado</div>
+  <div class="card-body text-success">
+    <h5 class="card-title" style="text-align:center">
+      <a id="aResult" href="#" target="_blank" class="card-title"></a>
+    </h5>
+  </div>
+</div>
+
+{#-----------------------------------------------------------------#}
 <hr>
 <small>{{ "now"|date("d/m/Y H:i:s") }}</small>
 {% endblock %}
 {% block scripts %}
 <script>
+
+(function($) {
+$.fn.inputFilter = function(inputFilter) {
+  return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
+    if (inputFilter(this.value)) {
+      this.oldValue = this.value;
+      this.oldSelectionStart = this.selectionStart;
+      this.oldSelectionEnd = this.selectionEnd;
+    } else if (this.hasOwnProperty("oldValue")) {
+      this.value = this.oldValue;
+      this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
+    } else {
+      this.value = "";
+    }
+  });
+};
+}(jQuery));
+
   $(document).ready(function () {
 
     $("#formConsultor").submit(function(e) {
       console.log('eventsubmit');
-      e.preventDefault(); // prevent actual form submit
-
+      e.preventDefault();
       //WIP: validar datos
 
       var form = $(this);
@@ -70,25 +114,47 @@
       $.ajax({
         type: "POST",
         url: url,
-        data: form.serialize(), // serializes form input
+        data: form.serialize(),
         beforeSend: function() {
 
           $("#btBuscar").hide();
+
+          {# limpia info de validacion server #}
           $("#dvAlert").hide();
-          $("#hMsg").text('');//h4
           $("#lAlert").html('');//lista
+          $("#hMsgAlert").text('');//h4
+
+          {# limpia resultado de busqueda #}
+          $("#dvResult").hide();
+          $("#aResult").text('');
+          $("#aResult").attr('href','#');
+
+          {# limpia busqueda sin resultados #}
+          $("#dvWarn").hide();
+          $("#warnMsg").text('');
+
           $("#dvBuscando").show();
         },
-        success: function(data){
-          console.log('success: ',data);
-          //llenar tabla con link al PDF
-          // alert(data);
+        success: function(res){
+          console.log('success: ',res);
+
+          if('data' in res){
+            $("#aResult").text('Folio: '+res.data.folio +' '+res.data.fecha);
+            $("#aResult").attr('href',res.data.url);
+            $("#dvResult").show();
+          }
+          else{
+            {# busqueda sin resultado #}
+            $("#warnMsg").text(res.message);
+            $("#dvWarn").show();
+          }
         },
         error: function (jqXhr, textStatus, errorMessage) {
           var res = jqXhr.responseJSON;
           switch (jqXhr.status) {
             case 400:
-              $("#hMsg").text(res.message);
+              $("#hMsgAlert").text(res.message);
+
               if('details' in res){
                 if('tipoDoc' in res.details){
                   $("#lAlert").append('<li>'+res.details.tipoDoc+'</li>');
@@ -106,11 +172,13 @@
               break;
             case 500:
               console.warn(' error 500');
-              $("#hMsg").text("Ha ocurrido un error desconocido, intente de nuevo más tarde");
+              $("#hMsgAlert").text("Ha ocurrido un error desconocido, intente de nuevo más tarde");
                 break;
             default:
               console.warn(' error '+jqXhr.status);
-              $("#hMsg").text("Ha ocurrido un error desconocido, intente de nuevo más tarde");
+              console.warn(' error '+errorMessage);
+
+              $("#hMsgAlert").text("Ha ocurrido un error desconocido, intente de nuevo más tarde");
           }
 
           $("#dvAlert").show();
@@ -122,7 +190,16 @@
         },
       });
     });//submit
-  });//-------------------------------------------------------------
+
+    $("#txFolio").inputFilter(function(value) {
+      return /^-?\d*$/.test(value);
+    });
+
+    $("#txMonto").inputFilter(function(value) {
+      return /^-?\d*$/.test(value);
+    });
+    
+  });
 </script>
 
 {% endblock %}

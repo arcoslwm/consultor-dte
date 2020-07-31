@@ -3,7 +3,9 @@
 use \DateTime;
 
 /**
+ * Clase con metodos estaticos para creación y validación de fechas.
  *
+ * @author Luis Arcos <arcos.lwm@gmail.com>
  */
 class Date {
 

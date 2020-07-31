@@ -9,8 +9,7 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 
 /**
- * [ConsultorController description]
- * 
+ *
  * @author Luis Arcos <arcos.lwm@gmail.com>
  */
 class ConsultorController extends ControllerAbstract

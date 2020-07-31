@@ -4,6 +4,7 @@ use App\Utils\Date;
 
 /**
  * Representa los datos del formutlario de busqueda para un documento tributario electronico (boleta)
+ * contiene logica de validación de estos,y los errores.
  *
  *  @author Luis Arcos <arcos.lwm@gmail.com>
  */
@@ -19,8 +20,8 @@ class Dte
     private $fecha;
 
     /**
-     * errores de InvalidArgumentException
-     * @var [type]
+     * errores de validacion
+     * @var array
      */
     private $errors;
 

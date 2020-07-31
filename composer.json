@@ -1,23 +1,21 @@
 {
-  "name": "ricardoper/slim3-skeleton",
-  "type": "library",
+  "name": "arcoslwm/consultor-dte",
+  "type": "project",
   "license": "MIT",
-  "description": "PHP Slim Framework v3.5 Skeleton With Twig Views, Flash Messages, VarDumper And A Good Folder Organization",
+  "description": "Consultor de Documento Tributario electronico sobre PHP Slim Framework v3.5 Skeleton",
   "keywords": [
     "PHP",
     "Slim",
     "Framework",
     "Skeleton",
-    "Twig",
-    "Flash",
-    "VarDumper"
+    "Twig"
   ],
-  "homepage": "https://github.com/ricardoper",
+  "homepage": "https://github.com/arcoslwm",
   "authors": [
     {
-      "name": "Ricardo Pereira",
-      "email": "github@ricardopereira.es",
-      "homepage": "http://ricardopereira.es"
+      "name": "Luis Arcos",
+      "email": "arcos.lwm@gmail.com",
+      "role": "Developer"
     }
   ],
   "require": {
@@ -37,10 +35,11 @@
       "bootstrap/helpers.php"
     ]
   },
-  "config": {
-    "optimize-autoloader": true
-  },
   "scripts": {
-    "start": "php -S localhost:3000 -t public"
+    "start": "php -S 0.0.0.0:8000 -t public"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "process-timeout":0
   }
 }

@@ -8,6 +8,9 @@ use Monolog\Logger;
 use Slim\Http\Request;
 use Slim\Http\Response;
 
+use \SoapClient;
+use \SoapFault;
+
 /**
  *
  * @author Luis Arcos <arcos.lwm@gmail.com>
@@ -62,12 +65,33 @@ class ConsultorController extends ControllerAbstract
             );
             return $res;
         }
-
+        
         /**
          * consultar WS  dentro de un trycatch
-         * devolver respuesta
+         * si viene pdf en base 64 acomodar.
+         * si hay mensaje de error... analizar y devover respuesta
          * sin doc o  cargar pdf de alguna manera
          */
+
+        try {
+            $sc = new SoapClient(env('WSDL_URL', null), [ "trace" => true ] );
+            // $log->debug("sc getFuntions: ".print_r($sc->__getFunctions(),true));
+
+            $wsRes = $sc->ResolveIP( [ "ipAddress" => "181.74.136.95", "licenseKey" => "0" ] );
+
+            $log->debug("resultado: ".print_r($wsRes,true));
+        }
+        catch (SoapFault $e) {
+            $log->error("SoapFault: ".$e->getMessage());
+            $log->error("SoapFault traza: ".$e->getTraceAsString());
+            $res = $this->getResponse()->withJson(
+                ['message'=>'SoapFault', 'details'=>''],
+                500
+            );
+            return $res;
+        }
+
+
 
         //dev testing
         if (rand(0, 10)>5) {

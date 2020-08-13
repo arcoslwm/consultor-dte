@@ -135,7 +135,7 @@ $.fn.inputFilter = function(inputFilter) {
           $("#dvBuscando").show();
         },
         success: function(res){
-
+          console.log(res);
           if('data' in res){
             $("#aResult").text('Folio: '+res.data.folio +' '+res.data.fecha);
             $("#aResult").attr('href',res.data.url);

@@ -25,7 +25,14 @@ class ConsultorController extends ControllerAbstract
     {
         $log = $this->getService('logger');
         $log->info("ConsultorController loadForm");
-        return $this->render('Consultor/form.twig');
+        return $this->render(
+            'Consultor/form.twig',
+            ['tiposDoc'=>[
+                    'boleta'=>Dte::TIPO_BOLETA,
+                    'exenta'=>Dte::TIPO_BOLETA_EXENTA
+                ]
+            ]
+        );
     }
 
     /**
@@ -65,12 +72,12 @@ class ConsultorController extends ControllerAbstract
             );
             return $res;
         }
-        
+
+        // TODO:
         /**
-         * consultar WS  dentro de un trycatch
-         * si viene pdf en base 64 acomodar.
-         * si hay mensaje de error... analizar y devover respuesta
-         * sin doc o  cargar pdf de alguna manera
+         * consultar WS verdadero dentro de trycatch
+         * si viene pdf en base 64 convertir.
+         * si hay mensaje de error... analizar y devolver respuesta
          */
 
         try {
@@ -91,8 +98,6 @@ class ConsultorController extends ControllerAbstract
             return $res;
         }
 
-
-
         //dev testing
         if (rand(0, 10)>5) {
             $log->debug("ConsultorController busqueda CON resultado...");
@@ -111,7 +116,6 @@ class ConsultorController extends ControllerAbstract
                 'message'=>'No se encuentra documento asociado a los datos'
             ]);
         }
-
         return $res;
     }
 }

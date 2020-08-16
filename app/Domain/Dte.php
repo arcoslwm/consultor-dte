@@ -11,8 +11,8 @@ use App\Utils\Date;
 class Dte
 {
 
-    const TIPO_BOLETA=1;
-    const TIPO_BOLETA_EXENTA=2;
+    const TIPO_BOLETA=39;
+    const TIPO_BOLETA_EXENTA=41;
 
     private $tipo;
     private $folio;

@@ -2,5 +2,5 @@
 
 return [
     'name' => 'app',
-    'path' => storage_path() . '/logs/consultor-dte_'.date('Ymd').'.log',
+    'path' => log_path() . '/consultor-dte_'.date('Ymd').'.log',
 ];

@@ -158,9 +158,12 @@ class ConsultorController extends ControllerAbstract
              $log->warning("ConsultorController:descargar NOT FOUND: ".$fileName);
 
              return $this->getView()->render(
-                     $this->getResponse()->withStatus(StatusCode::HTTP_NOT_FOUND),
-                     '404.twig',
-                     []
+                 $this->getResponse()->withStatus(StatusCode::HTTP_NOT_FOUND),
+                 '404.twig',
+                 [
+                     'message' => 'No se ha encotrado el documento solicitado.',
+                     'ruta' => $this->getContainer()->get('router')->pathFor('consultor')
+                 ]
              );
         }
 

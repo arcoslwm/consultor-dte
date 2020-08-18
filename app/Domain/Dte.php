@@ -6,13 +6,15 @@ use App\Utils\Date;
  * Representa los datos del formutlario de busqueda para un documento tributario electronico (boleta)
  * contiene logica de validación de estos,y los errores.
  *
- *  @author Luis Arcos <arcos.lwm@gmail.com>
+ *  @author arcoslwm <arcos.lwm@gmail.com>
  */
 class Dte
 {
 
-    const TIPO_BOLETA=1;
-    const TIPO_BOLETA_EXENTA=2;
+    const TIPO_BOLETA=39;
+    const TIPO_BOLETA_EXENTA=41;
+
+    const FILE_EXTENSION = 'pdf';
 
     private $tipo;
     private $folio;

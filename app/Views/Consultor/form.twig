@@ -20,8 +20,8 @@
     <label for="slTipoDoc">Tipo de Documento: </label>
     <select id="slTipoDoc" name="slTipoDoc" class="form-control" required>
       <option value="" selected disabled hidden>Tipo Doc.</option>
-      <option value="1">Boleta</option>
-      <option value="2">Boleta No Afecta o Exenta</option>
+      <option value="{{tiposDoc.boleta}}">Boleta</option>
+      <option value="{{tiposDoc.exenta}}">Boleta No Afecta o Exenta</option>
     </select>
   </div>
   <div class="form-group">
@@ -73,7 +73,7 @@
   <div class="card-header" style="text-align:center">Resultado</div>
   <div class="card-body text-success">
     <h5 class="card-title" style="text-align:center">
-      <a id="aResult" href="#" target="_blank" class="card-title"></a>
+      <a id="aResult" href="#" class="card-title"></a>
     </h5>
   </div>
 </div>
@@ -82,6 +82,7 @@
 <hr>
 <small>{{ "now"|date("d/m/Y H:i:s") }}</small>
 {% endblock %}
+
 {% block scripts %}
 <script>
 
@@ -135,7 +136,7 @@ $.fn.inputFilter = function(inputFilter) {
           $("#dvBuscando").show();
         },
         success: function(res){
-
+          console.log(res);
           if('data' in res){
             $("#aResult").text('Folio: '+res.data.folio +' '+res.data.fecha);
             $("#aResult").attr('href',res.data.url);

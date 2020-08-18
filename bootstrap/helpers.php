@@ -140,3 +140,15 @@ if (!function_exists('storage_path')) {
         return base_path() . '/storage';
     }
 }
+
+if (!function_exists('log_path')) {
+    /**
+     * Get the path to the log folder
+     *
+     * @return string
+     */
+    function log_path()
+    {
+        return base_path() . '/log';
+    }
+}

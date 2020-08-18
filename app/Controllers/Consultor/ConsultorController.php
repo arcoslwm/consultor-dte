@@ -3,10 +3,15 @@
 use App\Kernel\ControllerAbstract;
 use App\Domain\Dte;
 
+use App\Utils\ElapsedTime;
+
 //dev
 use Monolog\Logger;
 use Slim\Http\Request;
 use Slim\Http\Response;
+use Slim\Http\StatusCode;
+
+use Slim\Http\Stream;
 
 use \SoapClient;
 use \SoapFault;
@@ -49,11 +54,11 @@ class ConsultorController extends ControllerAbstract
         if($req->isXhr()===false){
 
             $log->warn('request no es Xhr');
-            $res = $this->getResponse()->withJson(
+
+            return $this->getResponse()->withJson(
                 ['message'=>'La solicitud no ha podido ser procesada','details'=>['bad request']],
-                400
+                StatusCode::HTTP_BAD_REQUEST
             );
-            return $res;
         }
 
         $dte = new Dte(
@@ -66,11 +71,10 @@ class ConsultorController extends ControllerAbstract
         if($dte->isValid()===false){
             $log->warn('Form con errores: '.print_r($dte->getErrors(),true));
 
-            $res = $this->getResponse()->withJson(
+            return $this->getResponse()->withJson(
                 ['message'=>'Error de validación', 'details'=>$dte->getErrors()],
-                400
+                StatusCode::HTTP_BAD_REQUEST
             );
-            return $res;
         }
 
         // TODO:
@@ -91,12 +95,29 @@ class ConsultorController extends ControllerAbstract
         catch (SoapFault $e) {
             $log->error("SoapFault: ".$e->getMessage());
             $log->error("SoapFault traza: ".$e->getTraceAsString());
-            $res = $this->getResponse()->withJson(
+
+            return $this->getResponse()->withJson(
                 ['message'=>'SoapFault', 'details'=>''],
-                500
+                StatusCode::HTTP_INTERNAL_SERVER_ERROR
             );
-            return $res;
         }
+
+        //DEV: $pdfContent vendra del WS
+        $pathPdfB64 = storage_path() . '/cvPdfB64.txt';
+        $fpPdfB64 = fopen($pathPdfB64 , "r");
+        $pdfContent = fread($fpPdfB64 , filesize($pathPdfB64));
+        fclose ($fpPdfB64);
+        //fin $pdfContent
+
+        //medir tiempo
+        $et = new ElapsedTime();
+
+        $fNombre = uniqid('dte-');
+        $pdfTemp = fopen(storage_path() .'/'.$fNombre.'.'.Dte::FILE_EXTENSION, "w");
+        fwrite ($pdfTemp,base64_decode ($pdfContent));
+        fclose ($pdfTemp);
+
+        $log->debug("archivo: ".$fNombre.".pdf  creado en: ". $et->getElapsedTime());
 
         //dev testing
         if (rand(0, 10)>5) {
@@ -106,7 +127,12 @@ class ConsultorController extends ControllerAbstract
                 'data'=>[
                     'folio'=>$dte->getFolio(),
                     'fecha'=>$dte->getFecha(),
-                    'url'=>'http://biblioteca.clacso.edu.ar/ar/libros/osal/osal4/analisis.pdf'
+                    'url'=> $this->getContainer()
+                                    ->get('router')
+                                    ->pathFor(
+                                        'descarga',
+                                        ['fileName' => $fNombre]
+                                    )
                 ]
             ]);
         }
@@ -117,5 +143,34 @@ class ConsultorController extends ControllerAbstract
             ]);
         }
         return $res;
+    }
+
+    public function descargar($fileName)
+    {
+        $log = $this->getService('logger');
+
+        $log->info("ConsultorController:descargar: ".$fileName);
+
+        $path = storage_path() .'/'.$fileName.'.'.Dte::FILE_EXTENSION;
+        $fh = fopen($path, "rb");
+
+        if ($fh === false) {
+             $log->warning("ConsultorController:descargar NOT FOUND: ".$fileName);
+
+             return $this->getView()->render(
+                     $this->getResponse()->withStatus(StatusCode::HTTP_NOT_FOUND),
+                     '404.twig',
+                     []
+             );
+        }
+
+        $finfo    = new \finfo(FILEINFO_MIME);
+        $stream = new Stream($fh);
+
+        return $this->getResponse()
+                            ->withHeader('Content-Disposition', 'attachment; filename='.$fileName.'.'.Dte::FILE_EXTENSION.';')
+                            ->withHeader('Content-Type', $finfo->file($path))
+                            ->withHeader('Content-Length', (string) filesize($path))
+                            ->withBody($stream);
     }
 }

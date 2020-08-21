@@ -1,20 +1,15 @@
 <?php namespace App\Controllers\Consultor;
 
-use App\Kernel\ControllerAbstract;
-use App\Domain\Dte;
+use \SoapClient;
+use \Exception;
 
-use App\Utils\ElapsedTime;
-
-//dev
-use Monolog\Logger;
-use Slim\Http\Request;
 use Slim\Http\Response;
 use Slim\Http\StatusCode;
-
 use Slim\Http\Stream;
 
-use \SoapClient;
-use \SoapFault;
+use App\Domain\Dte;
+use App\Utils\ElapsedTime;
+use App\Kernel\ControllerAbstract;
 
 /**
  *
@@ -23,8 +18,8 @@ use \SoapFault;
 class ConsultorController extends ControllerAbstract
 {
     /**
-     * [Carga el formulario de consulta ]
-     * @return [twig view]
+     * Carga formulario de consulta
+     * @return twig view
      */
     public function loadForm()
     {
@@ -41,15 +36,16 @@ class ConsultorController extends ControllerAbstract
     }
 
     /**
+     *
      * valida datos y realiza la búsqueda del documento.
-     * @return
+     *
      */
     public function buscar() {
 
         $log = $this->getService('logger');
         $req = $this->getRequest();
 
-        $log->debug("ConsultorController buscar... ");
+        $log->debug("ConsultorController buscar...");
 
         if($req->isXhr()===false){
 
@@ -62,39 +58,38 @@ class ConsultorController extends ControllerAbstract
         }
 
         $dte = new Dte(
-                $req->getParsedBodyParam('slTipoDoc' ,null),
-                $req->getParsedBodyParam('txFolio' ,null),
-                $req->getParsedBodyParam('txMonto' ,null),
-                $req->getParsedBodyParam('dtFecha' ,null)
+            $req->getParsedBodyParam('slTipoDoc' ,null),
+            $req->getParsedBodyParam('txFolio' ,null),
+            $req->getParsedBodyParam('txMonto' ,null),
+            $req->getParsedBodyParam('dtFecha' ,null)
         );
 
-        if($dte->isValid()===false){
-            $log->warn('Form con errores: '.print_r($dte->getErrors(),true));
+        if($dte->isValidInputs()===false){
+            $log->warn('Form con errores: '.print_r( $dte->getInputErrors(),true) );
 
             return $this->getResponse()->withJson(
-                ['message'=>'Error de validación', 'details'=>$dte->getErrors()],
+                ['message'=>'Error de validación', 'details'=>$dte->getInputErrors()],
                 StatusCode::HTTP_BAD_REQUEST
             );
         }
 
-        // TODO:
-        /**
-         * consultar WS verdadero dentro de trycatch
-         * si viene pdf en base 64 convertir.
-         * si hay mensaje de error... analizar y devolver respuesta
-         */
-
         try {
-            $sc = new SoapClient(env('WSDL_URL', null), [ "trace" => true ] );
+            $etWs = new ElapsedTime();
+            $sClient = new SoapClient(env('WSDL_URL', null), [ "trace" => true ] );
             // $log->debug("sc getFuntions: ".print_r($sc->__getFunctions(),true));
 
-            $wsRes = $sc->ResolveIP( [ "ipAddress" => "181.74.136.95", "licenseKey" => "0" ] );
+            $log->debug(" WSParams: ".print_r( $dte->getWSParams() , true ));
 
-            $log->debug("resultado: ".print_r($wsRes,true));
+            $dte->setDoc( $sClient->get_pdf( $dte->getWSParams() ) );
+
+            $log->debug("WS respuesta en aprox. : ". $etWs->getElapsedTime().' seg');
         }
-        catch (SoapFault $e) {
-            $log->error("SoapFault: ".$e->getMessage());
-            $log->error("SoapFault traza: ".$e->getTraceAsString());
+        catch (Exception $e) {
+            $log->error("Exception Soap: ".$e->getMessage());
+            $log->error("Exception Soap traza: ".$e->getTraceAsString());
+            if($e->getCode()===Dte::ERROR_FORMATO_RESP_WS){
+                $log->error(" WSResponse: ".print_r( $dte->getWsResponse() , true ));
+            }
 
             return $this->getResponse()->withJson(
                 ['message'=>'SoapFault', 'details'=>''],
@@ -102,47 +97,48 @@ class ConsultorController extends ControllerAbstract
             );
         }
 
-        //DEV: $pdfContent vendra del WS
-        $pathPdfB64 = storage_path() . '/cvPdfB64.txt';
-        $fpPdfB64 = fopen($pathPdfB64 , "r");
-        $pdfContent = fread($fpPdfB64 , filesize($pathPdfB64));
-        fclose ($fpPdfB64);
-        //fin $pdfContent
 
-        //medir tiempo
-        $et = new ElapsedTime();
+        if($dte->wsRequestIsSuccess()===false){
+            $log->warn("ConsultorController respuesta WS: ".$dte->getWsErrorMsg());
+            if(!empty($dte->getWsResponse())){
+                $log->warn(" WSResponse: ".print_r( $dte->getWsResponse() , true ));
+            }
+            $log->debug("ConsultorController busqueda SIN resultado!");
 
-        $fNombre = uniqid('dte-');
-        $pdfTemp = fopen(storage_path() .'/'.$fNombre.'.'.Dte::FILE_EXTENSION, "w");
-        fwrite ($pdfTemp,base64_decode ($pdfContent));
-        fclose ($pdfTemp);
-
-        $log->debug("archivo: ".$fNombre.".pdf  creado en: ". $et->getElapsedTime());
-
-        //dev testing
-        if (rand(0, 10)>5) {
-            $log->debug("ConsultorController busqueda CON resultado...");
-            $res = $this->getResponse()->withJson([
-                'message'=>'ok',
-                'data'=>[
-                    'folio'=>$dte->getFolio(),
-                    'fecha'=>$dte->getFecha(),
-                    'url'=> $this->getContainer()
-                                    ->get('router')
-                                    ->pathFor(
-                                        'descarga',
-                                        ['fileName' => $fNombre]
-                                    )
-                ]
+            return $this->getResponse()->withJson([
+                    'message'=>'No se encuentra documento asociado a los datos'
             ]);
         }
-        else {
-            $log->debug("ConsultorController busqueda SIN resultado...");
-            $res = $this->getResponse()->withJson([
-                'message'=>'No se encuentra documento asociado a los datos'
-            ]);
+
+        try {
+            $et = new ElapsedTime();
+            $dte->createPdf();
         }
-        return $res;
+        catch (Exception $e) {
+            $log->error("Exception createPdf: ".$e->getMessage());
+            $log->error("Exception createPdf traza: ".$e->getTraceAsString());
+
+            return $this->getResponse()->withJson(
+                ['message'=>'createPdf', 'details'=>''],
+                StatusCode::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+        $log->debug("archivo: ".$dte->getNombreArchivo().".pdf  creado en: ". $et->getElapsedTime());
+
+        $log->debug("ConsultorController busqueda CON resultado...");
+        return $this->getResponse()->withJson([
+            'message'=>'ok',
+            'data'=>[
+                'folio'=>$dte->getFolio(),
+                'fecha'=>$dte->getFecha(),
+                'url'=> $this->getContainer()
+                                ->get('router')
+                                ->pathFor(
+                                    'descarga',
+                                    ['fileName' => $dte->getNombreArchivo()]
+                                )
+            ]
+        ]);
     }
 
     public function descargar($fileName)
@@ -152,6 +148,8 @@ class ConsultorController extends ControllerAbstract
         $log->info("ConsultorController:descargar: ".$fileName);
 
         $path = storage_path() .'/'.$fileName.'.'.Dte::FILE_EXTENSION;
+        // TODO: cambiar, implica riesgo.
+        // $var = preg_replace('/\s+/', "", $var);
         $fh = fopen($path, "rb");
 
         if ($fh === false) {

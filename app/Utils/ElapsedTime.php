@@ -8,6 +8,9 @@
  */
 class ElapsedTime{
 
+    // TODO: modificar para que lso tiempos se inicio y fin se guarden en arrays asociativos.
+    //recibir la clave del un elemento del array y guardar tempo y para temrinar, recbir la clve neuvamente.
+
     /**
      * @var float
      */

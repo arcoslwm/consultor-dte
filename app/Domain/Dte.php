@@ -131,7 +131,8 @@ class Dte
      *
      * @return array parameteros
      */
-    function getWSParams(){
+    function getWSParams()
+    {
 
         if($this->isValidInputs()===false){
             throw new Exception( 'Error de validacion', self::ERROR_VALIDACION_INPUTS );
@@ -151,7 +152,7 @@ class Dte
     }
 
     /**
-     * setea el documento y la informacion desde la respuesta del WS
+     * setea el contenido del documento y la info de este desde la respuesta del WS
      * arroja exeception si el formato de respuesta no es reconocido.
      * @param stdClass $wsResponse respuesta WS
      */
@@ -163,16 +164,19 @@ class Dte
         )
         {
             if( !empty($wsResponse->get_pdfResult->string[1]) )
-            {
+            {//contenido del PDF en base64
                 $this->pdfDocFile= base64_decode($wsResponse->get_pdfResult->string[1]);
                 if( $this->pdfDocFile!==false ){
 
                     $this->wsRequestSuccess = true;
                     $this->wsNombreDoc = $wsResponse->get_pdfResult->string[0];
                 }
+                else{
+                    $this->wsResponse = $wsResponse;
+                }
             }
             else if ( !empty($wsResponse->get_pdfResult->string[2]) )
-            {
+            {//string con detalle de error
                 $this->wsErrorMsg = $wsResponse->get_pdfResult->string[2];
             }
         }

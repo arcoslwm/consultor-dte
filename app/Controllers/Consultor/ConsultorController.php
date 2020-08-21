@@ -36,8 +36,9 @@ class ConsultorController extends ControllerAbstract
     }
 
     /**
+     *
      * valida datos y realiza la búsqueda del documento.
-     * @return
+     *
      */
     public function buscar() {
 
@@ -57,14 +58,14 @@ class ConsultorController extends ControllerAbstract
         }
 
         $dte = new Dte(
-                $req->getParsedBodyParam('slTipoDoc' ,null),
-                $req->getParsedBodyParam('txFolio' ,null),
-                $req->getParsedBodyParam('txMonto' ,null),
-                $req->getParsedBodyParam('dtFecha' ,null)
+            $req->getParsedBodyParam('slTipoDoc' ,null),
+            $req->getParsedBodyParam('txFolio' ,null),
+            $req->getParsedBodyParam('txMonto' ,null),
+            $req->getParsedBodyParam('dtFecha' ,null)
         );
 
         if($dte->isValidInputs()===false){
-            $log->warn('Form con errores: '.print_r($dte->getInputErrors(),true));
+            $log->warn('Form con errores: '.print_r( $dte->getInputErrors(),true) );
 
             return $this->getResponse()->withJson(
                 ['message'=>'Error de validación', 'details'=>$dte->getInputErrors()],
@@ -87,7 +88,7 @@ class ConsultorController extends ControllerAbstract
             $log->error("Exception Soap: ".$e->getMessage());
             $log->error("Exception Soap traza: ".$e->getTraceAsString());
             if($e->getCode()===Dte::ERROR_FORMATO_RESP_WS){
-                $log->debug(" WSResponse: ".print_r( $dte->getWsResponse() , true ));
+                $log->error(" WSResponse: ".print_r( $dte->getWsResponse() , true ));
             }
 
             return $this->getResponse()->withJson(
@@ -98,7 +99,10 @@ class ConsultorController extends ControllerAbstract
 
 
         if($dte->wsRequestIsSuccess()===false){
-            $log->debug("ConsultorController respuesta WS: ".$dte->getWsErrorMsg());
+            $log->warn("ConsultorController respuesta WS: ".$dte->getWsErrorMsg());
+            if(!empty($dte->getWsResponse())){
+                $log->warn(" WSResponse: ".print_r( $dte->getWsResponse() , true ));
+            }
             $log->debug("ConsultorController busqueda SIN resultado!");
 
             return $this->getResponse()->withJson([
@@ -144,6 +148,8 @@ class ConsultorController extends ControllerAbstract
         $log->info("ConsultorController:descargar: ".$fileName);
 
         $path = storage_path() .'/'.$fileName.'.'.Dte::FILE_EXTENSION;
+        // TODO: cambiar, implica riesgo.
+        // $var = preg_replace('/\s+/', "", $var);
         $fh = fopen($path, "rb");
 
         if ($fh === false) {

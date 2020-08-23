@@ -11,6 +11,8 @@ use App\Domain\Dte;
 use App\Utils\ElapsedTime;
 use App\Kernel\ControllerAbstract;
 
+use App\Domain\Crypt;
+
 /**
  *
  * @author Luis Arcos <arcos.lwm@gmail.com>
@@ -25,6 +27,7 @@ class ConsultorController extends ControllerAbstract
     {
         $log = $this->getService('logger');
         $log->info("ConsultorController loadForm");
+
         return $this->render(
             'Consultor/form.twig',
             ['tiposDoc'=>[
@@ -65,7 +68,7 @@ class ConsultorController extends ControllerAbstract
         );
 
         if($dte->isValidInputs()===false){
-            $log->warn('Form con errores: '.print_r( $dte->getInputErrors(),true) );
+            $log->warn('Form con errores: ',$dte->getInputErrors());
 
             return $this->getResponse()->withJson(
                 ['message'=>'Error de validación', 'details'=>$dte->getInputErrors()],
@@ -78,7 +81,7 @@ class ConsultorController extends ControllerAbstract
             $sClient = new SoapClient(env('WSDL_URL', null), [ "trace" => true ] );
             // $log->debug("sc getFuntions: ".print_r($sc->__getFunctions(),true));
 
-            $log->debug(" WSParams: ".print_r( $dte->getWSParams() , true ));
+            $log->debug(" WSParams: " , $dte->getWSParams());
 
             $dte->setDoc( $sClient->get_pdf( $dte->getWSParams() ) );
 
@@ -135,7 +138,7 @@ class ConsultorController extends ControllerAbstract
                                 ->get('router')
                                 ->pathFor(
                                     'descarga',
-                                    ['fileName' => $dte->getNombreArchivo()]
+                                    ['fileName' => Crypt::AES_Encode($dte->getNombreArchivo())]
                                 )
             ]
         ]);
@@ -146,10 +149,22 @@ class ConsultorController extends ControllerAbstract
         $log = $this->getService('logger');
 
         $log->info("ConsultorController:descargar: ".$fileName);
+        $fileName = Crypt::AES_Decode($fileName);
+
+        if ($fileName === false) {
+            $log->warning("ConsultorController: error en descifrar nombre de archivo");
+
+            return $this->getView()->render(
+                $this->getResponse()->withStatus(StatusCode::HTTP_NOT_FOUND),
+                '404.twig',
+                [
+                    'message' => 'No se ha encotrado el documento solicitado.',
+                    'ruta' => $this->getContainer()->get('router')->pathFor('consultor')
+                ]
+            );
+        }
 
         $path = storage_path() .'/'.$fileName.'.'.Dte::FILE_EXTENSION;
-        // TODO: cambiar, implica riesgo.
-        // $var = preg_replace('/\s+/', "", $var);
         $fh = fopen($path, "rb");
 
         if ($fh === false) {

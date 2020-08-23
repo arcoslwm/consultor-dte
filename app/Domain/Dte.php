@@ -144,7 +144,7 @@ class Dte
         //monto es opcional(?)
         //fecha es opcional y no está validada
         $this->wsParams = [
-            "rutt" => self::RUT_FAMAE , "folio" => (string) $this->folio ,
+            "rutt" => self::RUT_FAMAE , "folio" => (string)$this->folio ,
             "doc" => $this->tipo , "monto" => $this->monto ,
             "fecha" => $this->getFecha('Y-m-d')
         ];
@@ -202,13 +202,18 @@ class Dte
         return $this->nombreArchivo;
     }
 
+    protected function setNombreArchivo(){
+
+        $this->nombreArchivo = 'dte-'.self::RUT_FAMAE.'-'.(string)$this->tipo.'-'. (string)$this->folio;
+    }
+
     /**
      * crea un documento pdf en el sistema local con el contenido de la propiedad $this->pdfDocFile
      */
     function createPdf()
     {
-        // TODO: generar nombre encriptado en base a rut, folio y tipoDoc
-        $this->nombreArchivo = uniqid('dte-');
+
+        $this->setNombreArchivo();
         $pdfTemp = fopen(storage_path() .'/'.$this->nombreArchivo.'.'.self::FILE_EXTENSION, "w");
         if ($pdfTemp === false) {
             throw new Exception( 'No se ha podido crear/abrir el archivo: '.$this->nombreArchivo, self::ERROR_PDF_FILE_CREATE );

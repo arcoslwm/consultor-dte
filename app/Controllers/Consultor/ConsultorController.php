@@ -128,6 +128,9 @@ class ConsultorController extends ControllerAbstract
         }
         $log->debug("archivo: ".$dte->getNombreArchivo().".pdf  creado en: ". $et->getElapsedTime());
 
+        $argDescarga = Crypt::AES_Encode($dte->getNombreArchivo());
+
+        $log->debug("argDescarga: ".$argDescarga);
         $log->debug("ConsultorController busqueda CON resultado...");
         return $this->getResponse()->withJson([
             'message'=>'ok',
@@ -138,7 +141,7 @@ class ConsultorController extends ControllerAbstract
                                 ->get('router')
                                 ->pathFor(
                                     'descarga',
-                                    ['fileName' => Crypt::AES_Encode($dte->getNombreArchivo())]
+                                    ['fileName' => $argDescarga ]
                                 )
             ]
         ]);
@@ -148,7 +151,7 @@ class ConsultorController extends ControllerAbstract
     {
         $log = $this->getService('logger');
 
-        $log->info("ConsultorController:descargar: ".$fileName);
+        $log->info("ConsultorController:descargar: arg: ".$fileName);
         $fileName = Crypt::AES_Decode($fileName);
 
         if ($fileName === false) {
@@ -164,6 +167,7 @@ class ConsultorController extends ControllerAbstract
             );
         }
 
+        $log->info("ConsultorController:descargar: archivo: ".$fileName);
         $path = storage_path() .'/'.$fileName.'.'.Dte::FILE_EXTENSION;
         $fh = fopen($path, "rb");
 

@@ -26,8 +26,7 @@ class ConsultorController extends ControllerAbstract
     public function loadForm()
     {
         $log = $this->getService('logger');
-        $log->info("ConsultorController loadForm");
-
+        $log->info("ConsultorController:loadForm");
         return $this->render(
             'Consultor/form.twig',
             ['tiposDoc'=>[
@@ -48,7 +47,7 @@ class ConsultorController extends ControllerAbstract
         $log = $this->getService('logger');
         $req = $this->getRequest();
 
-        $log->debug("ConsultorController buscar...");
+        $log->info("ConsultorController:buscar");
 
         if($req->isXhr()===false){
 
@@ -59,13 +58,13 @@ class ConsultorController extends ControllerAbstract
                 StatusCode::HTTP_BAD_REQUEST
             );
         }
-
         $dte = new Dte(
             $req->getParsedBodyParam('slTipoDoc' ,null),
             $req->getParsedBodyParam('txFolio' ,null),
             $req->getParsedBodyParam('txMonto' ,null),
             $req->getParsedBodyParam('dtFecha' ,null)
         );
+
 
         if($dte->isValidInputs()===false){
             $log->warn('Form con errores: ',$dte->getInputErrors());
@@ -77,7 +76,7 @@ class ConsultorController extends ControllerAbstract
         }
 
         try {
-            $etWs = new ElapsedTime();
+            $this->time->start('soapCall');
             $sClient = new SoapClient(env('WSDL_URL', null), [ "trace" => true ] );
             // $log->debug("sc getFuntions: ".print_r($sc->__getFunctions(),true));
 
@@ -85,9 +84,11 @@ class ConsultorController extends ControllerAbstract
 
             $dte->setDoc( $sClient->get_pdf( $dte->getWSParams() ) );
 
-            $log->debug("WS respuesta en aprox. : ". $etWs->getElapsedTime().' seg');
+            $log->info("WS respuesta en aprox. : ". $this->time->end('soapCall').' seg');
         }
         catch (Exception $e) {
+            $log->info("WS Exception en aprox. : ". $this->time->end('soapCall').' seg');
+            $log->info("elapsedTime Total. : ". $this->time->end().' seg');
             $log->error("Exception Soap: ".$e->getMessage());
             $log->error("Exception Soap traza: ".$e->getTraceAsString());
             if($e->getCode()===Dte::ERROR_FORMATO_RESP_WS){
@@ -114,7 +115,7 @@ class ConsultorController extends ControllerAbstract
         }
 
         try {
-            $et = new ElapsedTime();
+            $this->time->start('pdf');
             $dte->createPdf();
         }
         catch (Exception $e) {
@@ -126,12 +127,12 @@ class ConsultorController extends ControllerAbstract
                 StatusCode::HTTP_INTERNAL_SERVER_ERROR
             );
         }
-        $log->debug("archivo: ".$dte->getNombreArchivo().".pdf  creado en: ". $et->getElapsedTime());
+        $log->info("archivo: ".$dte->getNombreArchivo().".pdf  creado en: ". $this->time->end('pdf'));
 
         $argDescarga = Crypt::AES_Encode($dte->getNombreArchivo());
 
         $log->debug("argDescarga: ".$argDescarga);
-        $log->debug("ConsultorController busqueda CON resultado...");
+        $log->debug("ConsultorController busqueda CON resultado OK en". $this->time->end());
         return $this->getResponse()->withJson([
             'message'=>'ok',
             'data'=>[
@@ -187,6 +188,7 @@ class ConsultorController extends ControllerAbstract
         $finfo    = new \finfo(FILEINFO_MIME);
         $stream = new Stream($fh);
 
+        $log->info("ConsultorController:descargar fin en aprox ".$this->time->end()." seg.");
         return $this->getResponse()
                             ->withHeader('Content-Disposition', 'attachment; filename='.$fileName.'.'.Dte::FILE_EXTENSION.';')
                             ->withHeader('Content-Type', $finfo->file($path))

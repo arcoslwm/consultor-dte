@@ -5,6 +5,8 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 use Psr\Container\ContainerInterface;
 
+use App\Utils\ElapsedTime;
+
 abstract class ControllerAbstract
 {
 
@@ -15,6 +17,13 @@ abstract class ControllerAbstract
      */
     protected $container;
 
+    /**
+     * provee forma de medir tiempos.
+     *
+     * @var ElapsedTime
+     */
+    protected $time;
+
 
     /**
      * Controller constructor
@@ -24,6 +33,8 @@ abstract class ControllerAbstract
     public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
+
+        $this->time = new ElapsedTime();
 
         unset($container);
     }

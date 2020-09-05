@@ -4,6 +4,7 @@ use \SoapClient;
 use \Exception;
 
 use Slim\Http\Response;
+use Slim\Http\Request;
 use Slim\Http\StatusCode;
 use Slim\Http\Stream;
 
@@ -46,8 +47,7 @@ class ConsultorController extends ControllerAbstract
 
         $log = $this->getService('logger');
         $req = $this->getRequest();
-
-        $log->info("ConsultorController:buscar");
+        // $log->info("ConsultorController:buscar", $req->getParams());
 
         if($req->isXhr()===false){
 
@@ -58,13 +58,40 @@ class ConsultorController extends ControllerAbstract
                 StatusCode::HTTP_BAD_REQUEST
             );
         }
+
+        try {
+            $this->time->start('recaptcha');
+            $verifyResponse = $this->verifyRecaptcha(
+                $req->getParsedBodyParam('g-recaptcha-response' ,null)
+            );
+            $log->info("verifyRecaptcha respuesta en: ". $this->time->end('recaptcha').' seg');
+        }
+        catch (\Exception $e) {
+            $log->info("verifyRecaptcha Exception: ". $this->time->end('recaptcha').' seg');
+            $log->error("Exception verifyRecaptcha: ".$e->getMessage());
+            $log->error("Exception verifyRecaptcha traza: ".$e->getTraceAsString());
+
+            return $this->getResponse()->withJson(
+                ['message'=>'verifyRecaptchaFault', 'details'=>''],
+                StatusCode::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+
+        if( $verifyResponse['success']===false ){
+            $log->warn('recaptcha no validado: ', $verifyResponse['error-codes']);
+
+            return $this->getResponse()->withJson(
+                ['message'=>'Error de validación', 'details'=>['recaptcha'=>'El recaptcha no es válido']],
+                StatusCode::HTTP_BAD_REQUEST
+            );
+        }
+
         $dte = new Dte(
             $req->getParsedBodyParam('slTipoDoc' ,null),
             $req->getParsedBodyParam('txFolio' ,null),
             $req->getParsedBodyParam('txMonto' ,null),
             $req->getParsedBodyParam('dtFecha' ,null)
         );
-
 
         if($dte->isValidInputs()===false){
             $log->warn('Form con errores: ',$dte->getInputErrors());
@@ -84,11 +111,10 @@ class ConsultorController extends ControllerAbstract
 
             $dte->setDoc( $sClient->get_pdf( $dte->getWSParams() ) );
 
-            $log->info("WS respuesta en aprox. : ". $this->time->end('soapCall').' seg');
+            $log->info("WS respuesta en: ". $this->time->end('soapCall').' seg');
         }
         catch (Exception $e) {
             $log->info("WS Exception en aprox. : ". $this->time->end('soapCall').' seg');
-            $log->info("elapsedTime Total. : ". $this->time->end().' seg');
             $log->error("Exception Soap: ".$e->getMessage());
             $log->error("Exception Soap traza: ".$e->getTraceAsString());
             if($e->getCode()===Dte::ERROR_FORMATO_RESP_WS){
@@ -194,5 +220,31 @@ class ConsultorController extends ControllerAbstract
                             ->withHeader('Content-Type', $finfo->file($path))
                             ->withHeader('Content-Length', (string) filesize($path))
                             ->withBody($stream);
+    }
+
+    private function verifyRecaptcha($gRecaptchaResponse){
+        $url = "https://www.google.com/recaptcha/api/siteverify";
+        $data = [
+            'secret' => env('RECAPTCHA_SECRET_KEY', ''),
+            'response' => $gRecaptchaResponse
+        ];
+
+        $ch = curl_init();
+        if ($ch === false) {
+            throw new Exception( 'No se ha podido iniciar curl ');
+        }
+
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+        if ($response === false) {
+            throw new Exception( 'Fallo curl_exec');
+        }
+        curl_close($ch);
+        $arrResponse = json_decode($response, true);
+
+        return $arrResponse;
     }
 }

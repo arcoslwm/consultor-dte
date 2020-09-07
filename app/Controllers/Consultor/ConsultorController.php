@@ -40,7 +40,8 @@ class ConsultorController extends ControllerAbstract
 
     /**
      *
-     * valida datos y realiza la búsqueda del documento.
+     * valida datos, realiza la busqueda del documento, crea el archivo pdf para descargar
+     * y retorna los argumentos para su descarga.
      *
      */
     public function buscar() {
@@ -80,8 +81,10 @@ class ConsultorController extends ControllerAbstract
         if( $verifyResponse['success']===false ){
             $log->warn('recaptcha no validado: ', $verifyResponse['error-codes']);
 
-            return $this->getResponse()->withJson(
-                ['message'=>'Error de validación', 'details'=>['recaptcha'=>'El recaptcha no es válido']],
+            return $this->getResponse()->withJson([
+                    'message'=>'Error de validación',
+                    'details'=>['recaptcha'=>'El recaptcha no es válido']
+                ],
                 StatusCode::HTTP_BAD_REQUEST
             );
         }
@@ -174,6 +177,11 @@ class ConsultorController extends ControllerAbstract
         ]);
     }
 
+    /**
+     * Genera la descarga del archivo PDF en base al argumento recibido.
+     * @param  string $fileName encriptado
+     * @return mixed           archivo pdf en caso de exito 404 en caso contrario
+     */
     public function descargar($fileName)
     {
         $log = $this->getService('logger');
@@ -222,6 +230,12 @@ class ConsultorController extends ControllerAbstract
                             ->withBody($stream);
     }
 
+    /**
+     * Realiza la verificacion/validacion  en la api de google del token enviado por google en el form.
+     *
+     * @param  string $gRecaptchaResponse token
+     * @return array
+     */
     private function verifyRecaptcha($gRecaptchaResponse){
         $url = "https://www.google.com/recaptcha/api/siteverify";
         $data = [

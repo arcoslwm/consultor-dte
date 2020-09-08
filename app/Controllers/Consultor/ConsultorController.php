@@ -66,6 +66,7 @@ class ConsultorController extends ControllerAbstract
                 $req->getParsedBodyParam('g-recaptcha-response' ,null)
             );
             $log->info("verifyRecaptcha respuesta en: ". $this->time->end('recaptcha').' seg');
+            $log->debug("verifyRecaptcha: ",$verifyResponse);
         }
         catch (\Exception $e) {
             $log->info("verifyRecaptcha Exception: ". $this->time->end('recaptcha').' seg');

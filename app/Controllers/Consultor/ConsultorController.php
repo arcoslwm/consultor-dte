@@ -66,7 +66,7 @@ class ConsultorController extends ControllerAbstract
                 $req->getParsedBodyParam('g-recaptcha-response' ,null)
             );
             $log->info("verifyRecaptcha respuesta en: ". $this->time->end('recaptcha').' seg');
-            $log->debug("verifyRecaptcha: ",$verifyResponse);
+            // $log->debug("verifyRecaptcha: ",$verifyResponse);
         }
         catch (\Exception $e) {
             $log->info("verifyRecaptcha Exception: ". $this->time->end('recaptcha').' seg');
@@ -80,7 +80,7 @@ class ConsultorController extends ControllerAbstract
         }
 
         if( $verifyResponse['success']===false ){
-            $log->warn('recaptcha no validado: ', $verifyResponse['error-codes']);
+            $log->warn("recaptcha no validado: ", $verifyResponse['error-codes']);
 
             return $this->getResponse()->withJson([
                     'message'=>'Error de validación',

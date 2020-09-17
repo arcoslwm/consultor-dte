@@ -4,6 +4,7 @@ use \SoapClient;
 use \Exception;
 
 use Slim\Http\Response;
+use Slim\Http\Request;
 use Slim\Http\StatusCode;
 use Slim\Http\Stream;
 
@@ -26,8 +27,7 @@ class ConsultorController extends ControllerAbstract
     public function loadForm()
     {
         $log = $this->getService('logger');
-        $log->info("ConsultorController loadForm");
-
+        $log->info("ConsultorController:loadForm");
         return $this->render(
             'Consultor/form.twig',
             ['tiposDoc'=>[
@@ -40,15 +40,15 @@ class ConsultorController extends ControllerAbstract
 
     /**
      *
-     * valida datos y realiza la búsqueda del documento.
+     * valida datos, realiza la busqueda del documento, crea el archivo pdf para descargar
+     * y retorna los argumentos para su descarga.
      *
      */
     public function buscar() {
 
         $log = $this->getService('logger');
         $req = $this->getRequest();
-
-        $log->debug("ConsultorController buscar...");
+        // $log->info("ConsultorController:buscar", $req->getParams());
 
         if($req->isXhr()===false){
 
@@ -56,6 +56,36 @@ class ConsultorController extends ControllerAbstract
 
             return $this->getResponse()->withJson(
                 ['message'=>'La solicitud no ha podido ser procesada','details'=>['bad request']],
+                StatusCode::HTTP_BAD_REQUEST
+            );
+        }
+
+        try {
+            $this->time->start('recaptcha');
+            $verifyResponse = $this->verifyRecaptcha(
+                $req->getParsedBodyParam('g-recaptcha-response' ,null)
+            );
+            $log->info("verifyRecaptcha respuesta en: ". $this->time->end('recaptcha').' seg');
+            // $log->debug("verifyRecaptcha: ",$verifyResponse);
+        }
+        catch (\Exception $e) {
+            $log->info("verifyRecaptcha Exception: ". $this->time->end('recaptcha').' seg');
+            $log->error("Exception verifyRecaptcha: ".$e->getMessage());
+            $log->error("Exception verifyRecaptcha traza: ".$e->getTraceAsString());
+
+            return $this->getResponse()->withJson(
+                ['message'=>'verifyRecaptchaFault', 'details'=>''],
+                StatusCode::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+
+        if( $verifyResponse['success']===false ){
+            $log->warn("recaptcha no validado: ", $verifyResponse['error-codes']);
+
+            return $this->getResponse()->withJson([
+                    'message'=>'Error de validación',
+                    'details'=>['recaptcha'=>'El recaptcha no es válido']
+                ],
                 StatusCode::HTTP_BAD_REQUEST
             );
         }
@@ -77,7 +107,7 @@ class ConsultorController extends ControllerAbstract
         }
 
         try {
-            $etWs = new ElapsedTime();
+            $this->time->start('soapCall');
             $sClient = new SoapClient(env('WSDL_URL', null), [ "trace" => true ] );
             // $log->debug("sc getFuntions: ".print_r($sc->__getFunctions(),true));
 
@@ -85,9 +115,10 @@ class ConsultorController extends ControllerAbstract
 
             $dte->setDoc( $sClient->get_pdf( $dte->getWSParams() ) );
 
-            $log->debug("WS respuesta en aprox. : ". $etWs->getElapsedTime().' seg');
+            $log->info("WS respuesta en: ". $this->time->end('soapCall').' seg');
         }
         catch (Exception $e) {
+            $log->info("WS Exception en aprox. : ". $this->time->end('soapCall').' seg');
             $log->error("Exception Soap: ".$e->getMessage());
             $log->error("Exception Soap traza: ".$e->getTraceAsString());
             if($e->getCode()===Dte::ERROR_FORMATO_RESP_WS){
@@ -114,7 +145,7 @@ class ConsultorController extends ControllerAbstract
         }
 
         try {
-            $et = new ElapsedTime();
+            $this->time->start('pdf');
             $dte->createPdf();
         }
         catch (Exception $e) {
@@ -126,12 +157,12 @@ class ConsultorController extends ControllerAbstract
                 StatusCode::HTTP_INTERNAL_SERVER_ERROR
             );
         }
-        $log->debug("archivo: ".$dte->getNombreArchivo().".pdf  creado en: ". $et->getElapsedTime());
+        $log->info("archivo: ".$dte->getNombreArchivo().".pdf  creado en: ". $this->time->end('pdf'));
 
         $argDescarga = Crypt::AES_Encode($dte->getNombreArchivo());
 
         $log->debug("argDescarga: ".$argDescarga);
-        $log->debug("ConsultorController busqueda CON resultado...");
+        $log->debug("ConsultorController busqueda CON resultado OK en". $this->time->end());
         return $this->getResponse()->withJson([
             'message'=>'ok',
             'data'=>[
@@ -147,6 +178,11 @@ class ConsultorController extends ControllerAbstract
         ]);
     }
 
+    /**
+     * Genera la descarga del archivo PDF en base al argumento recibido.
+     * @param  string $fileName encriptado
+     * @return mixed           archivo pdf en caso de exito 404 en caso contrario
+     */
     public function descargar($fileName)
     {
         $log = $this->getService('logger');
@@ -187,10 +223,43 @@ class ConsultorController extends ControllerAbstract
         $finfo    = new \finfo(FILEINFO_MIME);
         $stream = new Stream($fh);
 
+        $log->info("ConsultorController:descargar fin en aprox ".$this->time->end()." seg.");
         return $this->getResponse()
                             ->withHeader('Content-Disposition', 'attachment; filename='.$fileName.'.'.Dte::FILE_EXTENSION.';')
                             ->withHeader('Content-Type', $finfo->file($path))
                             ->withHeader('Content-Length', (string) filesize($path))
                             ->withBody($stream);
+    }
+
+    /**
+     * Realiza la verificacion/validacion  en la api de google del token enviado por google en el form.
+     *
+     * @param  string $gRecaptchaResponse token
+     * @return array
+     */
+    private function verifyRecaptcha($gRecaptchaResponse){
+        $url = "https://www.google.com/recaptcha/api/siteverify";
+        $data = [
+            'secret' => env('RECAPTCHA_SECRET_KEY', ''),
+            'response' => $gRecaptchaResponse
+        ];
+
+        $ch = curl_init();
+        if ($ch === false) {
+            throw new Exception( 'No se ha podido iniciar curl ');
+        }
+
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+        if ($response === false) {
+            throw new Exception( 'Fallo curl_exec');
+        }
+        curl_close($ch);
+        $arrResponse = json_decode($response, true);
+
+        return $arrResponse;
     }
 }

@@ -18,6 +18,7 @@
 
 <form id="formConsultor" method="post" action="{{ path_for('busqueda') }}">
 
+
   <div class="form-group">
     <label for="slTipoDoc">Tipo de Documento: </label>
     <select id="slTipoDoc" name="slTipoDoc" class="form-control" required>
@@ -37,11 +38,27 @@
     <label for="txMonto">Monto: </label>{#validar solo nurmeros#}
     <input id="txMonto" name="txMonto" type="text" class="form-control"  placeholder="9999">
   </div>
-  
+
   <div class="form-group">
     <label for="dtFecha" >Fecha: </label>{# pattern="[0-9]{4}-[0-9]{2}-[0-9]{2}" #}
     <input id="dtFecha" name="dtFecha" type="date" class="form-control" value="{{ "now"|date("Y-m-d") }}" max="{{ "now"|date("Y-m-d") }}">
   </div>
+
+  <div class="form-row" style="text-align:center">
+      <div class="form-group col-md-4"></div>
+      <div class="form-group col-md-4" style="text-align:center" >
+          <div
+                class="g-recaptcha"
+                data-size="compact"
+                data-callback="verifyCallback"
+                data-sitekey="6LfAzMcZAAAAAGEVr-pV-t3a4Op9icxDRRJJf6Kw"
+                style="display: inline-block;"
+          >
+          </div>
+      </div>
+      <div class="form-group col-md-4"></div>
+  </div>
+
     {#
     <div class="form-check">
       <input type="checkbox" class="form-check-input" id="exampleCheck1">
@@ -90,29 +107,49 @@
 
 {% block scripts %}
 <script>
-
-(function($) {
-$.fn.inputFilter = function(inputFilter) {
-  return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
-    if (inputFilter(this.value)) {
-      this.oldValue = this.value;
-      this.oldSelectionStart = this.selectionStart;
-      this.oldSelectionEnd = this.selectionEnd;
-    } else if (this.hasOwnProperty("oldValue")) {
-      this.value = this.oldValue;
-      this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
-    } else {
-      this.value = "";
+    function verifyCallback(response) {
+        console.log('verifyCallback');
+        $("#dvAlert").hide();
+        $("#lAlert").html('');//lista
+        $("#hMsgAlert").text('');//h4
     }
-  });
-};
-}(jQuery));
+</script>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
+<script>
+
+    (function($) {
+        $.fn.inputFilter = function(inputFilter) {
+            return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
+                if (inputFilter(this.value)) {
+                    this.oldValue = this.value;
+                    this.oldSelectionStart = this.selectionStart;
+                    this.oldSelectionEnd = this.selectionEnd;
+                }
+                else if (this.hasOwnProperty("oldValue")) {
+                    this.value = this.oldValue;
+                    this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
+                }
+                else {
+                    this.value = "";
+                }
+            });
+        };
+    }(jQuery));
 
   $(document).ready(function () {
 
     $("#formConsultor").submit(function(e) {
       e.preventDefault();
 
+      let recaptchaResponse = grecaptcha.getResponse();
+      if( recaptchaResponse.length===0 ){
+          console.warn("debe hacer verificacion");
+          $("#lAlert").html('');//lista
+          $("#hMsgAlert").text("debes completar el reCaptcha");
+          $("#dvAlert").show();
+          return;
+      }
       var form = $(this);
       var url = form.attr('action');
 
@@ -172,6 +209,9 @@ $.fn.inputFilter = function(inputFilter) {
                 if('fecha' in res.details){
                   $("#lAlert").append('<li>'+res.details.fecha+'</li>');
                 }
+                if('recaptcha' in res.details){
+                  $("#lAlert").append('<li>'+res.details.recaptcha+'</li>');
+                }
               }
               break;
             case 500:
@@ -189,6 +229,7 @@ $.fn.inputFilter = function(inputFilter) {
         },
         complete: function(){
           console.log('complete');
+          grecaptcha.reset();
           $("#dvBuscando").hide();
           $("#btBuscar").show();
         },

@@ -219,10 +219,10 @@ class Dte
             throw new Exception( 'No se ha podido crear/abrir el archivo: '.$this->nombreArchivo, self::ERROR_PDF_FILE_CREATE );
         }
 
-        if (fwrite($pdfTemp, $this->pdfDocFile) === FALSE) {
+        if (fwrite($pdfTemp, $this->pdfDocFile) === false) {
             throw new Exception( 'No se ha podido escribir el archivo: '.$this->nombreArchivo, self::ERROR_HTML_FILE_WRITE );
         }
-        if (fclose($pdfTemp) === FALSE) {
+        if (fclose($pdfTemp) === false) {
             throw new Exception( 'No se ha podido cerrar el archivo: '.$this->nombreArchivo, self::ERROR_HTML_FILE_CLOSE );
         }
     }

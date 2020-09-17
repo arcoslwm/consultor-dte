@@ -4,27 +4,47 @@
 /**
  * provee una forma de medir tiempos
  *
+ * (emula el funcionamiento de console.time() y console.timeEnd() de  JavaScript)
+ *
  * @author arcoslwm <arcos.lwm@gmail.com>
  */
 class ElapsedTime{
 
-    // TODO: modificar para que lso tiempos se inicio y fin se guarden en arrays asociativos.
-    //recibir la clave del un elemento del array y guardar tempo y para temrinar, recbir la clve neuvamente.
+    /**
+     *
+     * @var array
+     */
+    private $time;
 
     /**
-     * @var float
+     * precision que usa la funcion round para retornar los valores de los tiempos medidos
+     *
+     * @var int
      */
-    private $startTime;
+    private $precision;
 
-    function __construct(){
-        $this->startTime = microtime(true);
+    function __construct($label='default' , $precision=5){
+        $this->precision=$precision;
+        $this->start($label);
     }
 
     /**
-     * retorna el tiempo transcurrido desde la creación del objeto.
-     * @return float
+     * guarda con una etiqueta el inicio de una medición de tiempo.
+     *
+     * @param  string $label
+     *
      */
-    public function getElapsedTime(){
-        return  microtime(true) - $this->startTime;
+    public function start($label){
+        $this->time[$label] = microtime(true);
+    }
+
+    /**
+     * recibe una etiqueta y retorna el tiempo transcurrido desde que esa etiqueta fue iniciada.
+     *
+     * @param  string $label
+     * @return float       tiempo transcurrido desde el inicio de la etiqueta recibida.
+     */
+    public function end($label='default'){
+        return round( microtime(true) - $this->time[$label], $this->precision) ;
     }
 }

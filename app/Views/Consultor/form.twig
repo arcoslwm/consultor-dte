@@ -47,7 +47,14 @@
   <div class="form-row" style="text-align:center">
       <div class="form-group col-md-4"></div>
       <div class="form-group col-md-4" style="text-align:center" >
-          <div class="g-recaptcha" data-size="compact" data-callback="verifyCallback" data-sitekey="6LfAzMcZAAAAAGEVr-pV-t3a4Op9icxDRRJJf6Kw" ></div>
+          <div
+                class="g-recaptcha"
+                data-size="compact"
+                data-callback="verifyCallback"
+                data-sitekey="6LfAzMcZAAAAAGEVr-pV-t3a4Op9icxDRRJJf6Kw"
+                style="display: inline-block;"
+          >
+          </div>
       </div>
       <div class="form-group col-md-4"></div>
   </div>
@@ -99,31 +106,35 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+    function verifyCallback(response) {
+        console.log('verifyCallback');
+        $("#dvAlert").hide();
+        $("#lAlert").html('');//lista
+        $("#hMsgAlert").text('');//h4
+    }
+</script>
 <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <script>
 
-    var verifyCallback = function(response) {
-        $("#dvAlert").hide();
-        $("#lAlert").html('');//lista
-        $("#hMsgAlert").text('');//h4
-    };
-
     (function($) {
-    $.fn.inputFilter = function(inputFilter) {
-      return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
-        if (inputFilter(this.value)) {
-          this.oldValue = this.value;
-          this.oldSelectionStart = this.selectionStart;
-          this.oldSelectionEnd = this.selectionEnd;
-        } else if (this.hasOwnProperty("oldValue")) {
-          this.value = this.oldValue;
-          this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
-        } else {
-          this.value = "";
-        }
-      });
-    };
+        $.fn.inputFilter = function(inputFilter) {
+            return this.on("input keydown keyup mousedown mouseup select contextmenu drop", function() {
+                if (inputFilter(this.value)) {
+                    this.oldValue = this.value;
+                    this.oldSelectionStart = this.selectionStart;
+                    this.oldSelectionEnd = this.selectionEnd;
+                }
+                else if (this.hasOwnProperty("oldValue")) {
+                    this.value = this.oldValue;
+                    this.setSelectionRange(this.oldSelectionStart, this.oldSelectionEnd);
+                }
+                else {
+                    this.value = "";
+                }
+            });
+        };
     }(jQuery));
 
   $(document).ready(function () {
@@ -218,6 +229,7 @@
         },
         complete: function(){
           console.log('complete');
+          grecaptcha.reset();
           $("#dvBuscando").hide();
           $("#btBuscar").show();
         },

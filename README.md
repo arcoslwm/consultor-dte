@@ -20,3 +20,6 @@ usa skeleton: (https://github.com/ricardoper/slim3-skeleton)
 
 #### Formulario de busqueda:
 http(s)://virtualhost.dom/
+
+
+- En la carpeta ```log/``` se almacena el registro del uso de la aplicacion con archivos diarios.

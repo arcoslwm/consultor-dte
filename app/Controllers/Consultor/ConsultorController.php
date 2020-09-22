@@ -2,6 +2,7 @@
 
 use \SoapClient;
 use \Exception;
+use \RuntimeException;
 
 use Slim\Http\Response;
 use Slim\Http\Request;
@@ -48,7 +49,6 @@ class ConsultorController extends ControllerAbstract
 
         $log = $this->getService('logger');
         $req = $this->getRequest();
-        // $log->info("ConsultorController:buscar", $req->getParams());
 
         if($req->isXhr()===false){
 
@@ -66,12 +66,11 @@ class ConsultorController extends ControllerAbstract
                 $req->getParsedBodyParam('g-recaptcha-response' ,null)
             );
             $log->info("verifyRecaptcha respuesta en: ". $this->time->end('recaptcha').' seg');
-            // $log->debug("verifyRecaptcha: ",$verifyResponse);
         }
-        catch (\Exception $e) {
+        catch (RuntimeException $e) {
             $log->info("verifyRecaptcha Exception: ". $this->time->end('recaptcha').' seg');
-            $log->error("Exception verifyRecaptcha: ".$e->getMessage());
-            $log->error("Exception verifyRecaptcha traza: ".$e->getTraceAsString());
+            $log->error("RuntimeException verifyRecaptcha: ".$e->getMessage());
+            $log->error("RuntimeException verifyRecaptcha traza: ".$e->getTraceAsString());
 
             return $this->getResponse()->withJson(
                 ['message'=>'verifyRecaptchaFault', 'details'=>''],
@@ -238,7 +237,7 @@ class ConsultorController extends ControllerAbstract
      * @return array
      */
     private function verifyRecaptcha($gRecaptchaResponse){
-        $url = "https://www.google.com/recaptcha/api/siteverify";
+        $url = "hts://www.google.com/recaptcha/api/siteverify";
         $data = [
             'secret' => env('RECAPTCHA_SECRET_KEY', ''),
             'response' => $gRecaptchaResponse
@@ -246,7 +245,7 @@ class ConsultorController extends ControllerAbstract
 
         $ch = curl_init();
         if ($ch === false) {
-            throw new Exception( 'No se ha podido iniciar curl ');
+            throw new RuntimeException( 'No se ha podido iniciar curl ');
         }
 
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -255,11 +254,10 @@ class ConsultorController extends ControllerAbstract
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $response = curl_exec($ch);
         if ($response === false) {
-            throw new Exception( 'Fallo curl_exec');
+            throw new RuntimeException( 'Fallo curl_exec');
         }
         curl_close($ch);
-        $arrResponse = json_decode($response, true);
 
-        return $arrResponse;
+        return json_decode($response, true);
     }
 }

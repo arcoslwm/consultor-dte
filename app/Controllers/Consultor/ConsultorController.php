@@ -237,7 +237,7 @@ class ConsultorController extends ControllerAbstract
      * @return array
      */
     private function verifyRecaptcha($gRecaptchaResponse){
-        $url = "hts://www.google.com/recaptcha/api/siteverify";
+        $url = "https://www.google.com/recaptcha/api/siteverify";
         $data = [
             'secret' => env('RECAPTCHA_SECRET_KEY', ''),
             'response' => $gRecaptchaResponse

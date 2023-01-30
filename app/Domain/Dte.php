@@ -17,7 +17,7 @@ use App\Utils\Date;
  */
 class Dte
 {
-    const RUT_FAMAE="61105000";
+    const RUT_FAMAE="000000";
 
     const TIPO_BOLETA=39;
     const TIPO_BOLETA_EXENTA=41;
